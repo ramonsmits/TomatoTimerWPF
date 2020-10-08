@@ -6,7 +6,7 @@ using System.Windows.Media.Imaging;
 
 namespace TomatoTimerWPF
 {
-    internal class GifImage : Image
+    class GifImage : Image
     {
         public static readonly DependencyProperty FrameIndexProperty =
             DependencyProperty.Register(

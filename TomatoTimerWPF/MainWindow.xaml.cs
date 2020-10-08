@@ -20,6 +20,8 @@ using System.Windows.Media.Animation;
 using System.Configuration;
 
 using TomatoTimerWPF.Pages;
+using Gma.System.MouseKeyHook;
+using System.Media;
 
 namespace TomatoTimerWPF
 {
@@ -33,11 +35,7 @@ namespace TomatoTimerWPF
 
         [DllImport("user32.dll")]
         static extern Int32 FlashWindowEx(ref FLASHWINFO pwfi);
-        //static extern uint SetClassLong(HandleRef hWnd, int nIndex, uint dwNewLong);
-        //static extern uint GetClassLong(HandleRef hWnd, int nIndex, uint dwNewLong);
-
-        [//Obsolete("This method will crash on 64-bit operating systems. Use SetClassLongPtr instead"),
-        DllImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true)]
         static extern uint SetClassLong(HandleRef hWnd, int nIndex, uint dwNewLong);
 
         private const Int32 GWL_STYLE = -16;
@@ -63,7 +61,8 @@ namespace TomatoTimerWPF
         [System.Runtime.InteropServices.DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
 
-        enum TimerMode{
+        enum TimerMode
+        {
             MODE_WORK,
             MODE_RELAX,
             MODE_RELAX_LONG
@@ -94,19 +93,12 @@ namespace TomatoTimerWPF
 
         private bool m_isNormalClosingEvent;
 
+        private IKeyboardMouseEvents m_GlobalHook;
+
         public MainWindow()
         {
 
-            InitializeComponent(); 
-
-            //string path = System.Reflection.Assembly.GetExecutingAssembly().Location + ".config";
-            //if (!System.IO.File.Exists(path))
-            //{
-            //    //TomatoTimerWPF.TimerSettings.Default.Save();
-            //    Console.WriteLine("Save setting [" + path + "]");
-            //}
-            //else
-            //    Console.WriteLine("Exists![" + path + "]");
+            InitializeComponent();
 
             m_OverlayIconLastMin = -99999;
             m_isNormalClosingEvent = false;
@@ -127,7 +119,12 @@ namespace TomatoTimerWPF
             m_sbAniOut.Children.Add(taSlideOut);
             Storyboard.SetTargetProperty(daFadeOut, new PropertyPath(UIElement.OpacityProperty));
             Storyboard.SetTargetProperty(taSlideOut, new PropertyPath(FrameworkElement.MarginProperty));
-            
+
+            // Note: for the application hook, use the Hook.AppEvents() instead
+            m_GlobalHook = Hook.GlobalEvents();
+            m_GlobalHook.MouseMove += M_GlobalHook_MouseMove;
+            m_GlobalHook.KeyDown += M_GlobalHook_KeyDown;
+            //m_GlobalHook.KeyUp += M_GlobalHook_KeyUp;
 
             m_sbAniIn = new Storyboard();
             DoubleAnimation daFadeIn = new DoubleAnimation();
@@ -145,7 +142,7 @@ namespace TomatoTimerWPF
             m_sbAniIn.Children.Add(taSlideIn);
             Storyboard.SetTargetProperty(daFadeIn, new PropertyPath(UIElement.OpacityProperty));
             Storyboard.SetTargetProperty(taSlideIn, new PropertyPath(FrameworkElement.MarginProperty));
-            
+
             m_taSlideOut = taSlideOut;
             m_taSlideIn = taSlideIn;
 
@@ -163,13 +160,73 @@ namespace TomatoTimerWPF
                 //MessageBox.Show(e.ToString());
                 //MessageBox.Show("[" + TomatoTimerWPF.TimerSettings.Default.WindowRestoreBounds + "]");
             }
+            //            Left = 1400;
+            //Top = 800;
+        }
+
+        private void M_GlobalHook_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode == System.Windows.Forms.Keys.CapsLock)
+            {
+                //Opacity = 0.8;
+                WindowState = WindowState.Normal;
+            }
+        }
+
+        bool locked;
+
+        private void M_GlobalHook_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode == System.Windows.Forms.Keys.CapsLock)
+            {
+                locked = !Keyboard.IsKeyToggled(Key.CapsLock);
+
+                //Opacity = 0.1;
+                WindowState = locked ? WindowState.Minimized : WindowState.Normal;
+            }
+        }
+
+        private void M_GlobalHook_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (locked) return;
+
+            var margin = 100;
+            var windows = new System.Drawing.Rectangle((int)Top - margin, (int)Left - margin, (int)Width + margin * 2, (int)Height + margin * 2);
+
+            //System.Diagnostics.Debug.WriteLine($"Top: {Top,4} Y: {e.Y,4}     Left: {Left,4} x: {e.X,4}   Width{Width,4} Height{Height,4}  ");
+            var hit = windows.Contains(e.Location);
+
+            WindowState = hit ? WindowState.Minimized : WindowState.Normal;
+
+            //if ()
+            //{
+            //    SystemSounds.Beep.Play();
+            //    // fLIP x-AXIS
+
+            //    //for (int s = 0; s < System.Windows.Forms.Screen.AllScreens.Length; s++)
+
+            //    var screen = System.Windows.Forms.Screen.AllScreens[0];
+
+            //    // Top = 10 height 10, Sheight 100, => TOP 80
+
+            //    var upper = Top < screen.Bounds.Height / 2;
+            //    if (upper)
+            //    {
+            //        Top = screen.Bounds.Height - Top - Height;
+            //    }
+            //    else
+            //    {
+            //        var fromBottm = screen.Bounds.Height - Top + Height;
+            //        Top = fromBottm;
+            //    }
+            //}
         }
 
         static public Rect CheckBounds(Rect bounds)
         {
             int iInsideLT, iInsideRB;
             iInsideLT = iInsideRB = -1;
-            for (int s = 0; s < System.Windows.Forms.Screen.AllScreens.Length;s++ )
+            for (int s = 0; s < System.Windows.Forms.Screen.AllScreens.Length; s++)
             {
                 System.Windows.Forms.Screen screen = System.Windows.Forms.Screen.AllScreens[s];
                 if (bounds.Left >= screen.Bounds.Left && bounds.Top >= screen.Bounds.Top &&
@@ -236,7 +293,7 @@ namespace TomatoTimerWPF
                 m_TimeDatePauseStart = restoreStart;
                 m_mode = (TimerMode)TomatoTimerWPF.TimerSettings.Default.TimerRestoreMode;
             }
-            catch(Exception)
+            catch (Exception)
             {
                 m_TimeDateStart = DateTime.Now;
                 m_TimeDatePauseStart = DateTime.Now;
@@ -300,7 +357,7 @@ namespace TomatoTimerWPF
                     TomatoTimerWPF.TimerSettings.Default.TimerRestoreDateTime = "";
                     TomatoTimerWPF.TimerSettings.Default.TimerRestoreMode = (int)TimerMode.MODE_WORK;
                 }
-                
+
                 TomatoTimerWPF.TimerSettings.Default.WindowRestoreBounds = this.RestoreBounds.ToString();
                 TomatoTimerWPF.TimerSettings.Default.Save();
             }
@@ -337,19 +394,19 @@ namespace TomatoTimerWPF
                     m_pageSoundSettings.playSound(Page_SoundSettings.SoundType.WorkDone);
                 else
                     m_pageSoundSettings.playSound(Page_SoundSettings.SoundType.RestTimeOut);
-                
+
             }
 
             m_bIsOverTime = timerSpan.IsNegativeOrZero();
 
 
-            
+
             double progressValue = 100.0 - ((timerSpan.TotalMilliseconds * 100.0 / modeSpan.TotalMilliseconds));
             if (progressValue < 0.0)
                 progressValue = 0.0;
             else if (progressValue > 100.0)
                 progressValue = 100.0;
-            
+
 
             Page_Buttons pageButtons = m_pageButtons;//pageTransitionControl.CurrentPage as Page_Buttons;
             if (pageButtons != null)
@@ -445,21 +502,21 @@ namespace TomatoTimerWPF
                     //minText.FontWeight = FontWeights.Black;
                     //timeText.Inlines.Add(new Bold(minText));
                     timeText.Inlines.Add((timerSpan.Seconds & 0x1) == 0 ? ":" : " ");
-                    timeText.Inlines.Add("{0:00}".ToFormat(Math.Abs(timerSpan.Seconds)));   
+                    timeText.Inlines.Add("{0:00}".ToFormat(Math.Abs(timerSpan.Seconds)));
                 }
                 else
                 {
-                    if ((timerSpan.Seconds & 0x1)==0)
+                    if ((timerSpan.Seconds & 0x1) == 0)
                         time += "{0} {1:00}".ToFormat(Math.Abs(timerSpan.Minutes), Math.Abs(timerSpan.Seconds));
                     else
                         time += "{0}:{1:00}".ToFormat(Math.Abs(timerSpan.Minutes), Math.Abs(timerSpan.Seconds));
 
-                    Run minText= new Run("{0}".ToFormat(Math.Abs(timerSpan.Minutes)));
+                    Run minText = new Run("{0}".ToFormat(Math.Abs(timerSpan.Minutes)));
                     minText.FontFamily = new System.Windows.Media.FontFamily("/TomatoTimerWPF;component/Resource/#Roboto");
                     minText.FontWeight = FontWeights.Black;
                     timeText.Inlines.Add(new Bold(minText));
-                    timeText.Inlines.Add((timerSpan.Seconds & 0x1)==0?":":" ");
-                    timeText.Inlines.Add("{0:00}".ToFormat(Math.Abs(timerSpan.Seconds)));   
+                    timeText.Inlines.Add((timerSpan.Seconds & 0x1) == 0 ? ":" : " ");
+                    timeText.Inlines.Add("{0:00}".ToFormat(Math.Abs(timerSpan.Seconds)));
                 }
 
                 if (pageButtons.labelTimeWhite.Visibility == Visibility.Visible)
@@ -472,7 +529,7 @@ namespace TomatoTimerWPF
                     pageButtons.labelTime.Content = timeText;
                 }
 
-                
+
                 if (pageButtons.GetIsMouseDown())
                 {
                     if (pageButtons.btnRelax.IsPressed)
@@ -523,7 +580,7 @@ namespace TomatoTimerWPF
                     pageButtons.pbarTimer.Value = progressValue;
                 }
 
-                                  
+
             }
 
 
@@ -652,7 +709,7 @@ namespace TomatoTimerWPF
             //}
 
             UpdateUI();
-           
+
         }
 
         public void StartRelax()
@@ -739,7 +796,7 @@ namespace TomatoTimerWPF
             fw.hwnd = m_hwnd;// new WindowInteropHelper(this).Handle;
             fw.dwFlags = enable ? 2 : 0;
             //fw.uCount = enable ? UInt32.MaxValue : 0;
-            fw.uCount = enable ? (UInt32)(10*60) : 0;
+            fw.uCount = enable ? (UInt32)(10 * 60) : 0;
 
             FlashWindowEx(ref fw);
         }
@@ -767,14 +824,14 @@ namespace TomatoTimerWPF
             }
             if (TomatoTimerWPF.TimerSettings.Default.GoogleCal_src.Length != 0)
             {
-                if (TomatoTimerWPF.TimerSettings.Default.GoogleCal_src.IndexOf("@")!=-1)
+                if (TomatoTimerWPF.TimerSettings.Default.GoogleCal_src.IndexOf("@") != -1)
                 {
                     gcalUrl += "&src=" + System.Web.HttpUtility.UrlEncode(TomatoTimerWPF.TimerSettings.Default.GoogleCal_src);
                 }
                 else
                     gcalUrl += "&src=" + TomatoTimerWPF.TimerSettings.Default.GoogleCal_src;
             }
-                
+
             gcalUrl += "&dates=" + strTimeStart + "/" + strTimeEnd;
             //MessageBox.Show(gcalUrl);
             if (TomatoTimerWPF.TimerSettings.Default.GoogleCal_CopyToClipboard)
@@ -798,7 +855,7 @@ namespace TomatoTimerWPF
             FrameworkElement ucCurrent = ucContent.Children[0] as FrameworkElement;
             m_sbAniOut.Begin(ucCurrent);
 
-            
+
         }
 
         Stack<UserControl> pages = new Stack<UserControl>();
@@ -810,7 +867,7 @@ namespace TomatoTimerWPF
 
             m_taSlideOut.To = new Thickness(0, -this.Height, 0, 0);
             m_taSlideIn.From = new Thickness(0, this.Height, 0, 0);
-            
+
             pages.Push(m_pageSettings);
 
             FrameworkElement ucCurrent = ucContent.Children[0] as FrameworkElement;
@@ -928,7 +985,7 @@ namespace TomatoTimerWPF
 
         private void ThumbButtonPlay_Click(object sender, EventArgs e)
         {
-            Resume();           
+            Resume();
         }
 
         private void ThumbButtonPause_Click(object sender, EventArgs e)

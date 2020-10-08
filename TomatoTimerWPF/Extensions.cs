@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
 using System.Windows;
-using System.Windows.Media.Imaging;
 
 namespace TomatoTimerWPF
 {
-    public static class Extensions
+    static class Extensions
     {
         public static Visibility ToVisibility(this bool visible)
         {
@@ -24,18 +20,6 @@ namespace TomatoTimerWPF
             action(target);
             return target;
         }
-
-        //public static BitmapFrame GetBitmapFrame(this Icon icon)
-        //{
-        //    return BitmapFrame.Create(icon.GetStream());
-        //}
-
-        //public static Stream GetStream(this Icon icon)
-        //{
-        //    var stream = new MemoryStream();
-        //    icon.Save(stream);
-        //    return stream;
-        //}
 
         public static TimeSpan Milliseconds(this int ms)
         {
