@@ -36,9 +36,9 @@ namespace TomatoTimerWPF
                 typeof(GifImage),
                 new UIPropertyMetadata(100, null));
 
-        private Int32Animation animation;
-        private GifBitmapDecoder decoder;
-        private bool isInitialized;
+        Int32Animation animation;
+        GifBitmapDecoder decoder;
+        bool isInitialized;
 
         static GifImage()
         {
@@ -49,29 +49,29 @@ namespace TomatoTimerWPF
 
         public int FrameIndex
         {
-            get { return (int)GetValue(FrameIndexProperty); }
-            set { SetValue(FrameIndexProperty, value); }
+            get => (int)GetValue(FrameIndexProperty);
+            set => SetValue(FrameIndexProperty, value);
         }
 
         public bool AutoStart
         {
-            get { return (bool)GetValue(AutoStartProperty); }
-            set { SetValue(AutoStartProperty, value); }
+            get => (bool)GetValue(AutoStartProperty);
+            set => SetValue(AutoStartProperty, value);
         }
 
-        public string GifSource 
+        public string GifSource
         {
-            get { return (string)GetValue(GifSourceProperty); }
-            set { SetValue(GifSourceProperty, value); }
+            get => (string)GetValue(GifSourceProperty);
+            set => SetValue(GifSourceProperty, value);
         }
 
         public int DurationPerFrameMS
         {
-            get { return (int)GetValue(DurationPerFrameProperty); }
-            set { SetValue(DurationPerFrameProperty, value); }
+            get => (int)GetValue(DurationPerFrameProperty);
+            set => SetValue(DurationPerFrameProperty, value);
         }
 
-        private void Initialize()
+        void Initialize()
         {
             decoder = new GifBitmapDecoder(
                 new Uri("pack://application:,,," + GifSource),
@@ -91,7 +91,7 @@ namespace TomatoTimerWPF
             }
         }
 
-        private static void VisibilityChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        static void VisibilityChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             GifImage gifImage = sender as GifImage;
             if (gifImage == null)
@@ -108,7 +108,7 @@ namespace TomatoTimerWPF
             }
         }
 
-        private static void FrameIndexChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        static void FrameIndexChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             var gifImage = sender as GifImage;
             if (gifImage != null)
@@ -117,13 +117,13 @@ namespace TomatoTimerWPF
             }
         }
 
-        private static void AutoStartChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        static void AutoStartChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             if ((bool)e.NewValue)
                 ((GifImage)sender).StartAnimation();
         }
 
-        private static void GifSourceChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        static void GifSourceChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             ((GifImage)sender).Initialize();
         }

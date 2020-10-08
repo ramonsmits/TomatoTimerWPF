@@ -15,12 +15,6 @@ namespace TomatoTimerWPF
             return string.Format(format, args);
         }
 
-        public static T Chain<T>(this T target, Action<T> action)
-        {
-            action(target);
-            return target;
-        }
-
         public static TimeSpan Milliseconds(this int ms)
         {
             return new TimeSpan(0, 0, 0, 0, ms);
